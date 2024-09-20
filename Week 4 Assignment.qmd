@@ -1,0 +1,185 @@
+---
+title: "Week 4 - R, Tidyverse, Delimited Data, Excel, Manipulating"
+author: "John Tuong"
+execute:
+  warning: false
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Task 1: Conceptual Questions
+
+#### 1. If your working directory is myfolder/homework/, what relative path would you specify to get the file located at myfolder/MyData.csv?
+
+> The relative path that would need to be used to specify the file would be: ../MyData.csv. The ../ moves the directory from homework/ back to the to the myfolder/ and allows it to access MyData.cvs, which is located in myfolder/.
+
+#### 2. What are the major benefits of using R projects?
+
+> R projects allow you to divide your work into multiple contexts through its own: working directory, workspace, history, folder structure, and source documents. It works to keep all of your relevant files, code, and scripts in your workspace/directory/repo, making it easy for you to pick up from you last left your project. Additionally, we can take advantage of this and if we share our entire folder with others, they can also pick up the R project and the paths to things will work (under the assumption that we used relative paths) (Moodle).
+
+#### 3. What is git and what is github?
+
+> From week 1 lectures, Git is a version control system that tracks all the changes that a user makes to the files in a folder... this way you have a record of the changes that you have made to your files and it can revert back to previous versions of it if you ever need to do so. GitHub is a cloud-based platform that allows you to store, share, and work with others to write code. It allows you to store your work or code in a "repository" on GitHub" which allows you to showcase and share your work, track and manage your code, allow others to review your code, and collaborate with others. The repository is created by GitHub and is tracked by Git, and allows the user (and other users) to commit/pull/push changes to the files in the repo. In short, Git is the software and GitHub is the service - they work with each other to provide a workspace where Git can interact with GitHub's repository.
+
+#### 4. What are the two main differences between a tibble and a data.frame?
+
+> Tibbles are data frames but a modified version that is used in tidyverse. The two main differences between a tibble and a data.frame in regards to their usage are: printing and subsetting. For printing, tibbles only showcases the first 10 rows, and all of the columns that fit on the screen. For subsetting, tibbles is much more strict and adheres to the following: \[ always returns a tibble by default, partial matching of columns with \$ and \[\[ is not supported, only scalars or vectors with the same length as the number of rows can be used for assignment, rows outside of tibbles boundaries cannot be accessed, and when updating \[\[\<- and \[,-, type changes of entire columns are supported, but updating a part of a column requires that the new value is coercible to the existing type. \*Note: tibble() does much less than data.frame(): it doesn't change the type of inputs, it doesn't change the names of variables, and it never creates row names (R for Data Science & Tidyverse).
+
+#### 5. Rewrite the following nested function call using BaseR's chaining operator:
+
+> arrange(filter(select(as_tibble(iris), starts_with("Petal"), Species), Petal.Length \< 1.55), Species)
+
+```{r}
+#installed tidyverse package in console
+
+library(tidyverse) #loaded in tidyverse to use
+
+arrange(filter(select(as_tibble(iris), starts_with("Petal"), Species), Petal.Length < 1.55), Species) #using this to see what it outputs
+```
+
+```{r}
+iris <- data.frame(iris)
+
+iris |>
+  as.tibble() |>
+  select(starts_with("Petal"), Species) |>
+  filter(Petal.Length < 1.55) |>
+  arrange(Species)
+```
+
+## Task 2: Reading Delimited Data
+
+### Glass Data
+
+#### 1. Read data into R using a URL, renaming column names, and printing out the tibble.
+
+```{r}
+glassdata <- read_csv("https://www4.stat.ncsu.edu/online/datasets/glass.data", col_names = FALSE) #read in data from URL
+```
+
+```{r}
+colnames(glassdata) <- c("Id", "RI", "Na", "Mg", "Al", "Si", "K", "Ca", "Ba", "Fe", "Type_of_glass") #renamed column names
+glassdata #printed out column names
+```
+
+#### 2. Start a chain and create a character chain.
+
+```{r}
+library(dplyr)
+
+glassdata <- glassdata |>
+  mutate(
+    Type_of_glass = ifelse(Type_of_glass == 1, "building_windows_float_processed",
+                    ifelse(Type_of_glass == 2, "building_windows_non_float_processed",
+                    ifelse(Type_of_glass == 3, "vehicle_windows_float_processed",
+                    ifelse(Type_of_glass == 5, "containers",
+                    ifelse(Type_of_glass == 6, "tableware",
+                    ifelse(Type_of_glass == 7, "headlamps", "Error")
+))))))
+glassdata
+```
+
+#### 3. Continued chain, keeping only observations where Fe = less than 0.2 and the Type of Glass is either "tableware" or "headlamps".
+
+```{r}
+glassdata <- glassdata |>
+  filter(Fe < 0.2 & Type_of_glass == "tableware" | Type_of_glass == "headlamps")
+glassdata
+```
+
+### Yeast Data
+
+#### 1. Read Yeast data into R using URL and add column names.
+
+```{r}
+yeastdata <- read_table("https://www4.stat.ncsu.edu/~online/datasets/yeast.data", col_names = FALSE) #read in data from URL
+```
+
+```{r}
+colnames(yeastdata) <- c("seq_name", "mcg", "gvh", "alm", "mit", "erl", "pox", "vac", "nuc", "class") #renamed column names
+yeastdata #printed out column names
+```
+
+#### 2 /3 Start a chain that removes the seq_name and nuc columns. Continue chain to add columns corresponding to mean and median of each numeric variable
+
+```{r}
+yeastdata <- yeastdata |>
+  select(-seq_name, -nuc) |>
+  group_by(class) |>
+  mutate(across(where(is.numeric), list(mean = mean, median = median), .names = "{.col}_{.fn}"))
+yeastdata
+```
+
+## Task 3: Combining Excel and Delimited Data
+
+```{r}
+library(readxl)
+whitewinedata <- read_excel("white-wine.xlsx", sheet = NULL)
+whitewinedata
+```
+
+#### 2. Second sheet excel - read in this sheet and took those names to rename columns from sheet 1.
+
+```{r}
+whitewinedata2 <- read_excel("white-wine.xlsx", sheet = 2)
+whitewinedata2
+```
+
+```{r}
+colnames(whitewinedata) <- c("fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol", "quality")
+whitewinedata
+```
+
+#### 3. Added a column for type of wine with a value of "white" for every observation
+
+```{r}
+whitewinedata <- whitewinedata|>
+  mutate(type_of_wine = "white")
+whitewinedata
+```
+
+#### 4. Read in red wine data set using readr, replaced variable names, and append a column denoting the type as "red"
+
+```{r}
+redwinedata <- read_csv2("https://www4.stat.ncsu.edu/~online/datasets/red-wine.csv")
+redwinedata
+```
+
+```{r}
+colnames(redwinedata) <- c("fixed_acidity", "volatile_acidity", "citric_acid", "residual_sugar", "chlorides", "free_sulfur_dioxide", "total_sulfur_dioxide", "density", "pH", "sulphates", "alcohol", "quality")
+redwinedata
+```
+
+```{r}
+redwinedata <- redwinedata|>
+  mutate(type_of_wine = "red",
+         volatile_acidity = as.numeric(volatile_acidity),
+         citric_acid = as.numeric(citric_acid),
+         residual_sugar = as.numeric(residual_sugar),
+         chlorides = as.numeric(chlorides),
+         density = as.numeric(density),
+         sulphates = as.numeric(sulphates)
+         ) #mutated variables from characters to numerics in order to combine list - wasn't able to properly copy over the columns like whitewhitedata
+redwinedata
+```
+
+#### 5. Combined both data sets into one data set.
+
+```{r}
+combinedlist <- bind_rows(list(whitewinedata, redwinedata), .id = "id")
+combinedlist
+```
+
+#### 6/7/8/9 Chained on the combined data set.
+
+```{r}
+combinedlist <- combinedlist |>
+  filter(quality > 6.5 & alcohol < 132) |> #filtered to only look at quality > 6.5 and alcohol < 132
+  arrange(desc(quality)) |> #sorted data from highest to lowest by quality
+  select(contains("acid"), "alcohol", "type_of_wine", "quality") |> #selected variables containing acid, alcohol, and quality
+  group_by(quality) |> #grouped by quality for stats below
+  mutate(across(alcohol, list(mean = mean, sd = sd), .names = "{.col}_{.fn}")) #added mean and sd of alcohol 
+combinedlist
+```
